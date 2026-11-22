@@ -1,0 +1,53 @@
+# Desenvolvimento com hot-reload:
+#   docker compose -f docker-compose.dev.yml up --build
+#   Frontend (Vite): http://localhost:5173  ·  API + docs: http://localhost:8000/api/docs
+
+name: playlistmp3-dev
+
+x-backend-env: &backend-env
+  MAX_DURATION: ${MAX_DURATION:-7200}
+  FILE_TTL: ${FILE_TTL:-1800}
+  CLEANUP_INTERVAL: ${CLEANUP_INTERVAL:-300}
+  AUDIO_BITRATE: ${AUDIO_BITRATE:-320}
+  MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-2}
+  POT_PROVIDER_URL: ${POT_PROVIDER_URL:-}
+  LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: dev
+      args:
+        YTDLP_VERSION: ${YTDLP_VERSION:-2026.10.26}
+    image: playlistmp3-backend:dev
+    environment: *backend-env
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/tests:/app/tests
+    tmpfs:
+      - /tmp/playlistmp3:size=${TMPFS_SIZE:-1g},mode=1777
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    image: playlistmp3-frontend:dev
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # mantém o node_modules da imagem (não o do host)
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  pot-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider:2.0.2
+    profiles: ["pot"]
+    init: true
+    expose:
+      - "4416"

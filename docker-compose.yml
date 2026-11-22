@@ -1,0 +1,52 @@
+# Produção local: http://localhost:8080
+#   docker compose up -d --build
+# Com mitigação de bloqueio (PO token):
+#   COMPOSE_PROFILES=pot e POT_PROVIDER_URL=http://pot-provider:4416 no .env
+
+name: playlistmp3
+
+x-backend-env: &backend-env
+  MAX_DURATION: ${MAX_DURATION:-7200}
+  FILE_TTL: ${FILE_TTL:-1800}
+  CLEANUP_INTERVAL: ${CLEANUP_INTERVAL:-300}
+  AUDIO_BITRATE: ${AUDIO_BITRATE:-320}
+  MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-2}
+  POT_PROVIDER_URL: ${POT_PROVIDER_URL:-}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+services:
+  backend:
+    build:
+      context: ./backend
+      target: prod
+      args:
+        YTDLP_VERSION: ${YTDLP_VERSION:-2026.10.26}
+    image: playlistmp3-backend:latest
+    restart: unless-stopped
+    environment: *backend-env
+    # MP3 temporários ficam em RAM e somem quando o container para.
+    tmpfs:
+      - /tmp/playlistmp3:size=${TMPFS_SIZE:-1g},mode=1777
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: prod
+    image: playlistmp3-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Opcional: provedor de PO token para contornar o "Sign in to confirm you're not a bot".
+  pot-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider:2.0.2
+    profiles: ["pot"]
+    restart: unless-stopped
+    init: true
+    expose:
+      - "4416"
