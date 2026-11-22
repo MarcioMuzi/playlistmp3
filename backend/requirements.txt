@@ -1,0 +1,4 @@
+# yt-dlp é instalado no Dockerfile (build arg YTDLP_VERSION) para facilitar a atualização.
+fastapi==0.165.0
+uvicorn[standard]==0.54.0
+bgutil-ytdlp-pot-provider==2.0.2
