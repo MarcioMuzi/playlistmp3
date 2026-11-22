@@ -27,24 +27,27 @@ export default function App() {
     <div className="flex min-h-dvh flex-col bg-[radial-gradient(60rem_28rem_at_50%_-6rem,var(--color-brand-50),transparent)]">
       <Header />
 
-      <main className="flex-1">
-        <Hero>
-          <UrlInput value={url} onChange={setUrl} onSubmit={handleSubmit} busy={busy} />
-        </Hero>
+      <main className="flex flex-1 flex-col">
+        {/* Hero centralizado no espaço livre: a tela inicial cabe sem rolagem. */}
+        <div className="flex flex-1 flex-col justify-center pb-4 short:pb-0">
+          <Hero>
+            <UrlInput value={url} onChange={setUrl} onSubmit={handleSubmit} busy={busy} />
+          </Hero>
 
-        {state.phase !== 'idle' && (
-          <JobCard
-            state={state}
-            onReset={handleReset}
-            onRetry={() => void start(submittedUrl)}
-            onDownloaded={markDownloaded}
-          />
-        )}
+          {state.phase !== 'idle' && (
+            <JobCard
+              state={state}
+              onReset={handleReset}
+              onRetry={() => void start(submittedUrl)}
+              onDownloaded={markDownloaded}
+            />
+          )}
+        </div>
 
         <HowItWorks />
       </main>
 
-      <footer className="border-t border-slate-200/70 py-6 text-center text-xs text-slate-400">
+      <footer className="border-t border-slate-200/70 py-4 text-center text-xs text-slate-400">
         <p className="mx-auto max-w-5xl px-4">
           PlaylistMP3 · Converta apenas conteúdos que você tem o direito de baixar.
         </p>

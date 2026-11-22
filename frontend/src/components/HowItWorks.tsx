@@ -8,13 +8,13 @@ const STEPS: Array<{ icon: LucideIcon; title: string; text: string }> = [
 
 export function HowItWorks() {
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 pt-20 pb-12 sm:px-6" aria-labelledby="how-title">
+    <section className="mx-auto w-full max-w-5xl px-4 pt-10 pb-8 sm:px-6 sm:pt-6 short:pt-2 short:pb-6" aria-labelledby="how-title">
       <h2 id="how-title" className="text-center text-xs font-semibold tracking-[0.18em] text-slate-400 uppercase">
         Como funciona
       </h2>
-      <ol className="mt-8 grid gap-8 sm:grid-cols-3 sm:gap-6">
+      <ol className="mt-6 short:mt-4 grid gap-6 sm:grid-cols-3 sm:gap-8">
         {STEPS.map(({ icon: Icon, title, text }, i) => (
-          <li key={title} className="flex items-start gap-4 sm:flex-col sm:items-center sm:text-center">
+          <li key={title} className="flex items-start gap-4">
             <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-brand-600 shadow-sm">
               <Icon className="size-5" aria-hidden />
             </span>

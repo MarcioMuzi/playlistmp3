@@ -54,7 +54,7 @@ export function UrlInput({ value, onChange, onSubmit, busy }: UrlInputProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto mt-10 max-w-3xl text-left" noValidate>
+    <form onSubmit={handleSubmit} className="mx-auto mt-8 max-w-3xl text-left" noValidate>
       <div
         className={cn(
           'flex flex-col gap-2 rounded-2xl border bg-white p-2 shadow-xl shadow-slate-900/5 transition sm:flex-row',

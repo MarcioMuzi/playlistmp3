@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Telas com pouca altura (notebooks, Windows com escala 125%+): espaçamentos mais justos. */
+@custom-variant short (@media (min-width: 40rem) and (max-height: 720px));
+
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
@@ -28,6 +31,10 @@
 
 @layer base {
   html {
+    /* Reserva o espaço da barra (sem "pulo" quando o card aparece) e a deixa discreta. */
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-slate-300) transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
