@@ -1,0 +1,7 @@
+# Força quebras de linha LF em todos os arquivos de texto, inclusive em clones no
+# Windows (core.autocrlf=true). CRLF quebraria scripts e configs dentro dos containers.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

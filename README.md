@@ -3,27 +3,113 @@
 Aplicação web minimalista: cole o link de um vídeo do YouTube e baixe o áudio em **MP3 320 kbps**, com título, artista e capa embutidos.
 
 - Aceita somente vídeos do YouTube: `youtube.com/watch?v=…`, `youtu.be/…` e `youtube.com/shorts/…`
-- Sem login, sem histórico, sem banco de dados
-- Os arquivos ficam em RAM (tmpfs) e são apagados logo após o download
+- Sem cadastro, sem histórico e sem banco de dados
+- Roda no seu computador, e os arquivos são apagados do servidor logo após o download
 
 ![Tela do PlaylistMP3 com um MP3 pronto para download](docs/screenshot-pronto.png)
 
 > Projeto educacional, para uso pessoal. Leia o [aviso legal](#aviso-legal) antes de usar.
 
-## Stack
+**Sumário:** [Instalação passo a passo](#instalação-passo-a-passo) · [Uso no dia a dia](#uso-no-dia-a-dia) · [Problemas comuns](#problemas-comuns) · [Para desenvolvedores](#para-desenvolvedores) · [Aviso legal](#aviso-legal) · [Licença](#licença)
+
+---
+
+## Instalação passo a passo
+
+Você não precisa saber programar. São três etapas: instalar um programa (o **Docker Desktop**), baixar este projeto e rodar **um único comando**.
+
+**Você vai precisar de:**
+- Windows 10 ou 11 (64 bits), macOS ou Linux
+- Cerca de **3 GB livres** em disco
+- Internet. A primeira instalação baixa cerca de 1 GB.
+
+### 1. Instale o Docker Desktop
+
+O Docker é o programa que roda o PlaylistMP3 sem você precisar instalar Python, Node.js, ffmpeg etc.
+
+- **Windows:** baixe em [Docker Desktop para Windows](https://docs.docker.com/desktop/setup/install/windows-install/) e execute o instalador. Mantenha marcada a opção **"Use WSL 2"** e reinicie o computador se ele pedir.
+- **Mac:** baixe em [Docker Desktop para Mac](https://docs.docker.com/desktop/setup/install/mac-install/). Escolha a versão do seu processador: **Apple Silicon** (M1, M2…) ou **Intel**.
+- **Linux:** instale o [Docker Engine](https://docs.docker.com/engine/install/) com o plugin `docker compose`.
+
+Depois de instalar, **abra o Docker Desktop** e espere até ele indicar que está rodando ("Engine running"). No Windows e no Mac, ele precisa estar aberto sempre que você for usar o PlaylistMP3.
+
+### 2. Baixe o projeto
+
+Escolha **uma** das opções:
+
+- **Sem Git (mais simples):** nesta página do GitHub, clique no botão verde **Code** e depois em **Download ZIP**. Extraia o arquivo: no Windows, clique com o botão direito e escolha **Extrair tudo**. Vai surgir uma pasta chamada `playlistmp3-main`.
+- **Com Git:**
+  ```bash
+  git clone https://github.com/MarcioMuzi/playlistmp3.git
+  ```
+
+### 3. Abra um terminal dentro da pasta do projeto
+
+O terminal precisa estar **dentro da pasta** que contém o arquivo `docker-compose.yml`.
+
+- **Windows 11:** abra a pasta no Explorador de Arquivos, clique com o botão direito num espaço vazio e escolha **Abrir no Terminal**.
+- **Windows 10:** abra a pasta, segure **Shift**, clique com o botão direito num espaço vazio e escolha **Abrir janela do PowerShell aqui**.
+- **Mac:** abra o app **Terminal**, digite `cd ` (com um espaço no final), arraste a pasta do projeto para dentro da janela do Terminal e aperte **Enter**.
+- **Linux:** clique com o botão direito dentro da pasta e escolha **Abrir no terminal**.
+
+Para conferir se está no lugar certo, digite `dir` (Windows) ou `ls` (Mac/Linux) e aperte Enter. O arquivo `docker-compose.yml` deve aparecer na lista.
+
+### 4. Inicie o PlaylistMP3
+
+Copie o comando abaixo, cole no terminal e aperte **Enter**:
+
+```bash
+docker compose up -d --build
+```
+
+Na **primeira vez**, o Docker baixa e monta tudo, o que leva **de 3 a 10 minutos**, dependendo da sua internet. Ele termina quando o terminal mostra linhas com `Started` e volta a aceitar comandos. Das próximas vezes, a inicialização leva poucos segundos.
+
+### 5. Abra no navegador
+
+Acesse **[http://localhost:8080](http://localhost:8080)**, cole o link de um vídeo do YouTube e clique em **Converter**. Quando terminar, clique em **Baixar MP3**: o arquivo vai para a pasta de downloads do seu navegador.
+
+Pronto! 🎉
+
+---
+
+## Uso no dia a dia
+
+Rode os comandos abaixo num terminal aberto **na pasta do projeto** (veja o [passo 3](#3-abra-um-terminal-dentro-da-pasta-do-projeto)). No Windows e no Mac, o Docker Desktop precisa estar aberto.
+
+| O que fazer | Comando |
+|---|---|
+| **Desligar** o PlaylistMP3 | `docker compose down` |
+| **Ligar** de novo | `docker compose up -d` |
+| **Atualizar** para a versão mais nova do projeto | Baixe o ZIP de novo (ou rode `git pull`) e depois `docker compose up -d --build` |
+| **Atualizar só o yt-dlp**, quando as conversões começarem a falhar | Veja [Quando o YouTube bloquear](#quando-o-youtube-bloquear) |
+
+> Se você não desligar com `docker compose down`, o PlaylistMP3 volta sozinho sempre que o Docker Desktop for aberto.
+
+---
+
+## Problemas comuns
+
+| O que aparece | Como resolver |
+|---|---|
+| `'docker' não é reconhecido…` ou `docker: command not found` | O Docker não está instalado, ou o terminal foi aberto antes da instalação. Feche o terminal e abra de novo. Se persistir, refaça o [passo 1](#1-instale-o-docker-desktop). |
+| `Cannot connect to the Docker daemon` ou `error during connect` | O Docker Desktop está fechado. Abra o Docker Desktop, espere ficar pronto e rode o comando de novo. |
+| `no configuration file provided: not found` | O terminal não está na pasta do projeto. Refaça o [passo 3](#3-abra-um-terminal-dentro-da-pasta-do-projeto). |
+| `port is already allocated` ou `ports are not available` | Outro programa está usando a porta 8080. Na pasta do projeto, crie um arquivo chamado `.env`, com ponto no início, contendo a linha `APP_PORT=8081`. No Bloco de Notas, escolha "Todos os arquivos" ao salvar. Rode `docker compose up -d` e acesse `http://localhost:8081`. |
+| O navegador diz que **não consegue acessar** `localhost:8080` | Espere alguns segundos e recarregue a página. Confira com `docker compose ps`: os dois serviços devem aparecer como `Up`. |
+| **WSL 2 installation is incomplete** (Windows) | Abra o PowerShell como administrador, rode `wsl --update` e reinicie o computador. |
+| O app mostra **"O YouTube recusou a requisição"** | O YouTube bloqueou temporariamente. Tente de novo em alguns minutos. Se continuar, atualize o yt-dlp (veja [Quando o YouTube bloquear](#quando-o-youtube-bloquear)). |
+
+---
+
+## Para desenvolvedores
+
+### Stack
 
 | Camada | Tecnologia |
 |---|---|
 | Frontend | React 19, Vite 7, TypeScript, Tailwind CSS 4, Lucide |
 | Backend | Python 3.12, FastAPI, yt-dlp, ffmpeg, Deno (resolve os desafios JS do YouTube) |
 | Infra | Docker Compose (nginx serve o SPA e faz proxy de `/api`) |
-
-## Como rodar
-
-```bash
-cp .env.example .env            # opcional: todas as variáveis têm padrão
-docker compose up -d --build    # http://localhost:8080
-```
 
 ### Desenvolvimento (hot-reload)
 
@@ -39,7 +125,7 @@ Testes do backend:
 docker compose -f docker-compose.dev.yml exec backend python -m pytest -q
 ```
 
-## API
+### API
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -52,15 +138,35 @@ docker compose -f docker-compose.dev.yml exec backend python -m pytest -q
 
 Os erros vêm como `{code, message}`, com estes códigos: `INVALID_URL`, `PRIVATE`, `UNAVAILABLE`, `AGE_RESTRICTED`, `MEMBERS_ONLY`, `LIVE`, `TOO_LONG`, `BLOCKED`, `NETWORK`, `NOT_FOUND`, `EXPIRED` e `UNKNOWN`.
 
-## Limpeza dos arquivos temporários
+### Limpeza dos arquivos temporários
 
 1. **Após o download:** uma `BackgroundTask` apaga o diretório do job assim que a resposta termina.
-2. **Cancelamento:** os botões "Cancelar" e "Converter outro vídeo", e também fechar a aba, enviam um `DELETE` ao servidor.
+2. **Cancelamento:** os botões "Cancelar" e "Outro vídeo", e também fechar a aba, enviam um `DELETE` ao servidor.
 3. **Varredura periódica** (`CLEANUP_INTERVAL`): remove MP3 não baixados há mais de `FILE_TTL` e diretórios órfãos.
 4. **Startup e shutdown:** o diretório temporário é esvaziado por completo.
 5. **tmpfs:** os arquivos vivem em RAM, com limite definido por `TMPFS_SIZE`, e nunca tocam o disco.
 
-## Quando o YouTube bloquear
+### Configuração (`.env`)
+
+Todas as variáveis são opcionais. Para personalizar, copie `.env.example` para `.env`.
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `APP_PORT` | `8080` | Porta do app |
+| `YTDLP_VERSION` | `2026.10.26` | Versão do yt-dlp (`latest` / `nightly` aceitos) |
+| `MAX_DURATION` | `7200` | Duração máxima do vídeo, em segundos |
+| `AUDIO_BITRATE` | `320` | Bitrate do MP3 (CBR, em kbps) |
+| `MAX_CONCURRENT_JOBS` | `2` | Conversões simultâneas |
+| `FILE_TTL` | `1800` | Segundos até um MP3 não baixado ser apagado |
+| `CLEANUP_INTERVAL` | `300` | Intervalo da rotina de limpeza, em segundos |
+| `TMPFS_SIZE` | `1g` | Tamanho máximo do diretório temporário em RAM |
+| `LOG_LEVEL` | `INFO` | Nível de log do backend |
+| `YOUTUBE_AUTH_MODE` | `fallback` | Uso da conta do YouTube: `fallback`, `always` ou `off` |
+| `YOUTUBE_COOKIES_FILE` | `youtube-cookies.txt` | Nome do arquivo de cookies dentro de `./secrets/` |
+
+> O estado dos jobs vive em memória, por isso o backend roda com **1 worker** do uvicorn.
+
+### Quando o YouTube bloquear
 
 Os sintomas são HTTP 403 ou a mensagem "Sign in to confirm you're not a bot".
 
@@ -68,8 +174,12 @@ Os sintomas são HTTP 403 ou a mensagem "Sign in to confirm you're not a bot".
    ```bash
    YTDLP_VERSION=latest docker compose build --no-cache backend && docker compose up -d
    ```
+   No PowerShell (Windows), use:
+   ```powershell
+   $env:YTDLP_VERSION="latest"; docker compose build --no-cache backend; docker compose up -d
+   ```
    Também é possível usar `nightly` ou fixar uma versão no `.env`.
-2. **Ative o provedor de PO token** ([bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)). Para isso, descomente estas linhas no `.env`:
+2. **Ative o provedor de PO token** ([bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)). Para isso, coloque no `.env`:
    ```
    COMPOSE_PROFILES=pot
    POT_PROVIDER_URL=http://pot-provider:4416
@@ -79,7 +189,7 @@ Os sintomas são HTTP 403 ou a mensagem "Sign in to confirm you're not a bot".
 
 O backend já tenta novamente quando o download recebe HTTP 403, e a cada tentativa refaz a extração dos metadados. Sem conta configurada são até 3 tentativas anônimas. Com conta, no modo `fallback`, são 2 anônimas seguidas de 2 com a conta.
 
-## Conta do YouTube (opcional)
+### Conta do YouTube (opcional)
 
 O backend pode usar uma conta do YouTube como **plano B** quando o YouTube bloqueia a tentativa anônima (HTTP 403 ou "not a bot") ou quando o vídeo tem restrição de idade.
 
@@ -102,7 +212,7 @@ O backend pode usar uma conta do YouTube como **plano B** quando o YouTube bloqu
 
 Sem o arquivo de cookies, o app funciona normalmente no modo anônimo. Os detalhes de autenticação aparecem **só nos logs do backend**: a interface e a API não revelam que existe uma conta configurada. Durante uma nova tentativa, a interface mostra apenas "Tentando rota alternativa…".
 
-### 1. Exportar os cookies (janela anônima)
+#### 1. Exportar os cookies (janela anônima)
 
 Siga este procedimento para os cookies não serem invalidados ("rotacionados") pelo próprio navegador logo depois:
 
@@ -113,20 +223,22 @@ Siga este procedimento para os cookies não serem invalidados ("rotacionados") p
 
 Detalhes no wiki do yt-dlp: [Exporting YouTube cookies](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies).
 
-### 2. Instalar o arquivo
+#### 2. Instalar o arquivo
 
-O backend lê o arquivo em `./secrets/` (pasta fora do Git, montada **somente leitura** no container) com o nome definido em `YOUTUBE_COOKIES_FILE` (padrão: `youtube-cookies.txt`). O container roda com **UID 1000**, por isso o arquivo precisa ser legível por esse usuário.
+O backend lê o arquivo em `./secrets/` (pasta fora do Git, montada **somente leitura** no container) com o nome definido em `YOUTUBE_COOKIES_FILE` (padrão: `youtube-cookies.txt`).
 
-**Local (WSL2):**
+**Windows ou Mac (Docker Desktop):** mova o arquivo exportado para a pasta `secrets` do projeto e renomeie-o para `youtube-cookies.txt`. Não deixe cópias na pasta de downloads.
+
+**Linux / WSL2:** o container roda com **UID 1000**, por isso o arquivo precisa ser legível por esse usuário:
 
 ```bash
-# o navegador salvou em Downloads do Windows; ajuste o caminho
+# exemplo no WSL2: o navegador salvou em Downloads do Windows; ajuste o caminho
 cp /mnt/c/Users/<seu-usuario>/Downloads/youtube-cookies.txt ./secrets/youtube-cookies.txt
 chmod 600 ./secrets/youtube-cookies.txt
 rm /mnt/c/Users/<seu-usuario>/Downloads/youtube-cookies.txt   # não deixe cópias soltas
 ```
 
-No WSL o seu usuário costuma ter UID 1000. Confira com `id -u`.
+No Linux/WSL o seu usuário costuma ter UID 1000. Confira com `id -u`.
 
 **VPS:**
 
@@ -141,7 +253,7 @@ chmod 700 secrets
 chmod 600 secrets/youtube-cookies.txt
 ```
 
-### 3. Atualizar quando expirar
+#### 3. Atualizar quando expirar
 
 Os cookies duram de semanas a meses. Quando expiram, o log do backend mostra uma mensagem como `os cookies da conta do YouTube expiraram ou foram rotacionados`. Para renovar, basta **repetir os passos 1 e 2 sobrescrevendo o arquivo**. Não é preciso rebuild nem restart, porque o arquivo é lido a cada conversão.
 
@@ -158,23 +270,7 @@ Na inicialização aparece, por exemplo, `conta do YouTube: modo fallback, cooki
 - A cada uso, o backend trabalha numa cópia temporária em RAM (`chmod 600`), apagada logo em seguida. O arquivo original nunca é alterado.
 - Se o arquivo vazar, saia da conta em todos os dispositivos (Conta do Google → Segurança). Isso invalida os cookies.
 
-## Configuração (`.env`)
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `APP_PORT` | `8080` | Porta do app em produção |
-| `YTDLP_VERSION` | `2026.10.26` | Versão do yt-dlp (`latest` / `nightly` aceitos) |
-| `MAX_DURATION` | `7200` | Duração máxima do vídeo, em segundos |
-| `AUDIO_BITRATE` | `320` | Bitrate do MP3 (CBR, em kbps) |
-| `MAX_CONCURRENT_JOBS` | `2` | Conversões simultâneas |
-| `FILE_TTL` | `1800` | Segundos até um MP3 não baixado ser apagado |
-| `CLEANUP_INTERVAL` | `300` | Intervalo da rotina de limpeza, em segundos |
-| `TMPFS_SIZE` | `1g` | Tamanho máximo do diretório temporário em RAM |
-| `LOG_LEVEL` | `INFO` | Nível de log do backend |
-| `YOUTUBE_AUTH_MODE` | `fallback` | Uso da conta do YouTube: `fallback`, `always` ou `off` |
-| `YOUTUBE_COOKIES_FILE` | `youtube-cookies.txt` | Nome do arquivo de cookies dentro de `./secrets/` |
-
-> O estado dos jobs vive em memória, por isso o backend roda com **1 worker** do uvicorn.
+---
 
 ## Aviso legal
 
