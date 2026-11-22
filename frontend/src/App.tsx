@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Header } from './components/Header'
-import { Hero } from './components/Hero'
-import { HowItWorks } from './components/HowItWorks'
-import { JobCard } from './components/JobCard'
+import { Intro } from './components/Intro'
+import { ResultArea } from './components/ResultArea'
+import { StepsStrip } from './components/StepsStrip'
 import { UrlInput } from './components/UrlInput'
 import { useConversion } from './hooks/useConversion'
 
@@ -24,34 +24,34 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[radial-gradient(60rem_28rem_at_50%_-6rem,var(--color-brand-50),transparent)]">
+    <div className="flex min-h-dvh flex-col">
       <Header />
 
-      <main className="flex flex-1 flex-col">
-        {/* Hero centralizado no espaço livre: a tela inicial cabe sem rolagem. */}
-        <div className="flex flex-1 flex-col justify-center pb-4 short:pb-0">
-          <Hero>
-            <UrlInput value={url} onChange={setUrl} onSubmit={handleSubmit} busy={busy} />
-          </Hero>
+      {/* Conteúdo centralizado no espaço livre: cabe sem rolagem mesmo em telas baixas. */}
+      <main className="flex flex-1 items-center">
+        <div className="mx-auto grid w-full max-w-5xl xl:max-w-6xl items-center gap-8 px-4 py-8 sm:px-6 md:grid-cols-[minmax(0,4fr)_minmax(0,5fr)] md:gap-10 lg:gap-14 short:py-4">
+          <Intro />
 
-          {state.phase !== 'idle' && (
-            <JobCard
-              state={state}
-              onReset={handleReset}
-              onRetry={() => void start(submittedUrl)}
-              onDownloaded={markDownloaded}
-            />
-          )}
+          <section
+            aria-label="Conversor"
+            className="rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgb(15_23_42/0.04),0_12px_32px_-12px_rgb(15_23_42/0.12)]"
+          >
+            <div className="p-4 sm:p-5 short:pb-3">
+              <UrlInput value={url} onChange={setUrl} onSubmit={handleSubmit} busy={busy} />
+            </div>
+            <div className="flex min-h-40 flex-col border-t border-slate-100 p-4 sm:p-5 short:min-h-0 short:p-4">
+              <ResultArea
+                state={state}
+                onReset={handleReset}
+                onRetry={() => void start(submittedUrl)}
+                onDownloaded={markDownloaded}
+              />
+            </div>
+          </section>
         </div>
-
-        <HowItWorks />
       </main>
 
-      <footer className="border-t border-slate-200/70 py-4 text-center text-xs text-slate-400">
-        <p className="mx-auto max-w-5xl px-4">
-          PlaylistMP3 · Converta apenas conteúdos que você tem o direito de baixar.
-        </p>
-      </footer>
+      <StepsStrip />
     </div>
   )
 }
