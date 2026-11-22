@@ -6,6 +6,10 @@ Aplicação web minimalista: cole o link de um vídeo do YouTube e baixe o áudi
 - Sem login, sem histórico, sem banco de dados
 - Os arquivos ficam em RAM (tmpfs) e são apagados logo após o download
 
+![Tela do PlaylistMP3 com um MP3 pronto para download](docs/screenshot-pronto.png)
+
+> Projeto educacional, para uso pessoal. Leia o [aviso legal](#aviso-legal) antes de usar.
+
 ## Stack
 
 | Camada | Tecnologia |
@@ -172,6 +176,15 @@ Na inicialização aparece, por exemplo, `conta do YouTube: modo fallback, cooki
 
 > O estado dos jobs vive em memória, por isso o backend roda com **1 worker** do uvicorn.
 
----
+## Aviso legal
 
-Projeto de laboratório para uso pessoal. Converta apenas conteúdos que você tem o direito de baixar.
+Este é um projeto **educacional e de uso pessoal**, criado como laboratório de desenvolvimento. Ele **não tem vínculo** com o YouTube nem com o Google, e não é endossado por eles. "YouTube" é marca registrada da Google LLC.
+
+- Use o PlaylistMP3 apenas com conteúdos que **você tem o direito de baixar**: obras próprias, conteúdo em domínio público, conteúdo sob licenças que permitam download ou casos autorizados pelo titular dos direitos.
+- Baixar conteúdo do YouTube pode violar os [Termos de Serviço do YouTube](https://www.youtube.com/t/terms) e as leis de direitos autorais do seu país. **A responsabilidade pelo uso é inteiramente de quem usa.**
+- O projeto não hospeda, não armazena e não distribui conteúdo. Os arquivos gerados ficam temporariamente na máquina de quem roda a aplicação e são apagados logo após o download.
+- O software é fornecido "como está", sem garantias de nenhum tipo (veja a [licença](LICENSE)).
+
+## Licença
+
+Distribuído sob a licença [MIT](LICENSE). © 2026 Marcio Muzi.
