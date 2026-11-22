@@ -21,7 +21,8 @@ COPY --from=deno /deno /usr/local/bin/deno
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install -r requirements.txt \
+RUN pip install --upgrade "pip>=26.2" \
+    && pip install -r requirements.txt \
     && case "$YTDLP_VERSION" in \
          latest)  pip install -U "yt-dlp[default]" ;; \
          nightly) pip install -U --pre "yt-dlp[default]" ;; \

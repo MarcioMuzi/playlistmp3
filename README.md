@@ -146,6 +146,14 @@ Os erros vêm como `{code, message}`, com estes códigos: `INVALID_URL`, `PRIVAT
 4. **Startup e shutdown:** o diretório temporário é esvaziado por completo.
 5. **tmpfs:** os arquivos vivem em RAM, com limite definido por `TMPFS_SIZE`, e nunca tocam o disco.
 
+### Segurança
+
+- **Acesso só local por padrão:** a porta escuta em `127.0.0.1`. Para usar de outro aparelho na mesma rede, defina `APP_BIND=0.0.0.0` no `.env`. Não há login nem limite de uso, então só faça isso em redes de confiança.
+- **Links:** o link informado nunca é repassado ao yt-dlp. O backend extrai só o ID de 11 caracteres e monta ele mesmo a URL `youtube.com/watch?v=ID`. Isso bloqueia outras plataformas, playlists, endereços internos e tentativas de injeção.
+- **Sem shell:** o yt-dlp é chamado pela API Python, e os argumentos do ffmpeg são fixos. Os nomes de arquivo são sanitizados e os IDs de download são aleatórios (128 bits).
+- **Navegador:** o nginx envia `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` e `Permissions-Policy`. A API só aceita JSON, o que impede outros sites de dispararem conversões na sua máquina (CSRF).
+- **Containers:** o backend roda sem root, os segredos são montados somente leitura e os arquivos temporários ficam em RAM.
+
 ### Configuração (`.env`)
 
 Todas as variáveis são opcionais. Para personalizar, copie `.env.example` para `.env`.
@@ -153,6 +161,7 @@ Todas as variáveis são opcionais. Para personalizar, copie `.env.example` para
 | Variável | Padrão | Descrição |
 |---|---|---|
 | `APP_PORT` | `8080` | Porta do app |
+| `APP_BIND` | `127.0.0.1` | Quem acessa: `127.0.0.1` só este computador; `0.0.0.0` libera para a rede local (sem login: use só em redes de confiança) |
 | `YTDLP_VERSION` | `2026.10.26` | Versão do yt-dlp (`latest` / `nightly` aceitos) |
 | `MAX_DURATION` | `7200` | Duração máxima do vídeo, em segundos |
 | `AUDIO_BITRATE` | `320` | Bitrate do MP3 (CBR, em kbps) |

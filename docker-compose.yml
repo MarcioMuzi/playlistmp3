@@ -42,8 +42,9 @@ services:
       target: prod
     image: playlistmp3-frontend:latest
     restart: unless-stopped
+    # Só este computador acessa (127.0.0.1). Para liberar na rede local: APP_BIND=0.0.0.0
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:80"
     depends_on:
       backend:
         condition: service_healthy

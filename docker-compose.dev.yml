@@ -31,7 +31,7 @@ services:
     tmpfs:
       - /tmp/playlistmp3:size=${TMPFS_SIZE:-1g},mode=1777
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
 
   frontend:
     build:
@@ -44,7 +44,7 @@ services:
       - ./frontend:/app
       - /app/node_modules # mantém o node_modules da imagem (não o do host)
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     depends_on:
       - backend
 
