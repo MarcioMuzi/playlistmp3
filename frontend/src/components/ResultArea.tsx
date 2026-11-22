@@ -1,10 +1,9 @@
 import {
-  AudioLines,
   Ban,
   Check,
-  CircleCheck,
   CircleExclamationPoint,
   Download,
+  EighthNotes,
   LoaderCircle,
   Lock,
   RotateCcw,
@@ -51,11 +50,31 @@ export function ResultArea({ state, onReset, onRetry, onDownloaded }: ResultArea
 
 /* -------------------------------------------------------------- vazio */
 
+// Alturas fixas: forma de onda decorativa e determinística.
+const WAVE = [6, 10, 16, 9, 20, 14, 24, 12, 18, 28, 16, 22, 10, 26, 18, 30, 14, 20, 12, 24, 16, 10, 22, 14, 18, 8, 16, 12, 20, 10, 14, 6]
+
 function EmptyState() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-6 text-center">
-      <AudioLines className="size-6 text-slate-300" aria-hidden />
-      <p className="text-sm text-slate-400">O áudio convertido aparece aqui.</p>
+    <div className="flex flex-1 flex-col justify-center gap-3">
+      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3" aria-hidden>
+        <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-linear-to-br from-brand-500 to-brand-700 text-white shadow-sm shadow-brand-700/30">
+          <EighthNotes className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="h-2.5 w-2/5 rounded-full bg-slate-300/80" />
+            <span className="text-[10px] font-semibold tracking-wide text-slate-500">MP3 · 320 kbps</span>
+          </div>
+          <div className="flex h-7 items-center gap-[3px] overflow-hidden">
+            {[...WAVE, ...WAVE, ...WAVE].map((h, i) => (
+              <span key={i} className="w-[3px] shrink-0 rounded-full bg-brand-300" style={{ height: `${h}px` }} />
+            ))}
+          </div>
+        </div>
+      </div>
+      <p className="text-center text-sm text-slate-600">
+        Seu MP3 aparece aqui, <span className="text-slate-500">com capa, título e artista.</span>
+      </p>
     </div>
   )
 }
@@ -75,10 +94,10 @@ function VideoSummary({ video }: { video: VideoInfo }) {
         <h2 className="line-clamp-2 text-sm leading-snug font-semibold text-ink" title={video.title}>
           {video.title}
         </h2>
-        <p className="mt-0.5 truncate text-xs text-slate-500">
+        <p className="mt-0.5 truncate text-xs text-slate-600">
           {[video.uploader, formatDuration(video.duration)].filter(Boolean).join(' · ')}
         </p>
-        <p className="mt-1.5 text-xs text-slate-500 tabular-nums">
+        <p className="mt-1.5 text-xs text-slate-600 tabular-nums">
           MP3 {video.bitrate}&nbsp;kbps
           {video.estimated_size ? ` · ~${formatBytes(video.estimated_size)}` : ''}
         </p>
@@ -90,11 +109,11 @@ function VideoSummary({ video }: { video: VideoInfo }) {
 function VideoSkeleton() {
   return (
     <div className="flex animate-pulse gap-3" aria-hidden>
-      <div className="aspect-video w-28 shrink-0 rounded-lg short:w-24 bg-slate-100" />
+      <div className="aspect-video w-28 shrink-0 rounded-lg short:w-24 bg-slate-200/70" />
       <div className="flex-1 space-y-2 py-0.5">
-        <div className="h-3.5 w-4/5 rounded bg-slate-100" />
-        <div className="h-3 w-2/5 rounded bg-slate-100" />
-        <div className="h-3 w-1/4 rounded bg-slate-100" />
+        <div className="h-3.5 w-4/5 rounded bg-slate-200/70" />
+        <div className="h-3 w-2/5 rounded bg-slate-200/70" />
+        <div className="h-3 w-1/4 rounded bg-slate-200/70" />
       </div>
     </div>
   )
@@ -135,7 +154,7 @@ function ProgressPanel({
                   'grid size-4 place-items-center rounded-full',
                   status === 'done' && 'bg-brand-600 text-white',
                   status === 'active' && 'text-brand-600',
-                  status === 'pending' && 'text-slate-300',
+                  status === 'pending' && 'text-slate-400',
                 )}
               >
                 {status === 'done' ? (
@@ -149,7 +168,7 @@ function ProgressPanel({
               <span
                 className={cn(
                   'font-medium',
-                  status === 'pending' ? 'text-slate-400' : status === 'active' ? 'text-brand-700' : 'text-slate-600',
+                  status === 'pending' ? 'text-slate-500' : status === 'active' ? 'text-brand-700' : 'text-slate-600',
                 )}
               >
                 {label}
@@ -160,7 +179,7 @@ function ProgressPanel({
       </ol>
 
       <div
-        className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"
+        className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200/70"
         role="progressbar"
         aria-label={caption}
         aria-valuemin={0}
@@ -178,7 +197,7 @@ function ProgressPanel({
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-4 text-xs">
-        <p className="text-slate-500">{caption}</p>
+        <p className="text-slate-600">{caption}</p>
         <TextButton onClick={onCancel} tone="muted">
           Cancelar
         </TextButton>
@@ -201,43 +220,41 @@ function ReadyPanel({
   onReset: () => void
 }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex gap-2">
       <a
         href={href}
         download
         onClick={onDownloaded}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:ring-4 focus-visible:ring-brand-200 focus-visible:outline-none active:scale-[0.99]"
+        className="btn-primary inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold"
       >
-        <Download className="size-4" aria-hidden />
+        <Download className="size-4 shrink-0" aria-hidden />
         Baixar MP3
-        {size ? <span className="font-normal text-brand-100 tabular-nums">· {formatBytes(size)}</span> : null}
+        {size ? <span className="font-normal text-white/75 tabular-nums">· {formatBytes(size)}</span> : null}
       </a>
-      <div className="flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1.5 text-emerald-600">
-          <CircleCheck className="size-3.5" aria-hidden />
-          Pronto, com capa e tags
-        </span>
-        <TextButton onClick={onReset}>Converter outro vídeo</TextButton>
-      </div>
+      <SecondaryButton onClick={onReset} title="Converter outro vídeo">
+        <RotateCcw className="size-4" aria-hidden />
+        <span className="hidden sm:inline">Outro vídeo</span>
+      </SecondaryButton>
     </div>
   )
 }
 
 function DownloadedPanel({ onReset }: { onReset: () => void }) {
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        onClick={onReset}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-ink transition hover:bg-slate-50 focus-visible:ring-4 focus-visible:ring-brand-100 focus-visible:outline-none"
-      >
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+          <ShieldCheck className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-ink">Download iniciado</p>
+          <p className="truncate text-xs text-slate-600">O arquivo já foi removido do servidor.</p>
+        </div>
+      </div>
+      <SecondaryButton onClick={onReset}>
         <RotateCcw className="size-4" aria-hidden />
-        Converter outro vídeo
-      </button>
-      <p className="flex items-center gap-1.5 text-xs text-slate-500">
-        <ShieldCheck className="size-3.5 text-emerald-600" aria-hidden />
-        Download iniciado. O arquivo já foi removido do servidor.
-      </p>
+        Outro vídeo
+      </SecondaryButton>
     </div>
   )
 }
@@ -296,6 +313,20 @@ function ErrorPanel({
   )
 }
 
+function SecondaryButton({ onClick, title, children }: { onClick: () => void; title?: string; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-xs transition hover:border-slate-400 hover:bg-slate-50 hover:text-ink focus-visible:ring-4 focus-visible:ring-brand-100 focus-visible:outline-none"
+    >
+      {children}
+    </button>
+  )
+}
+
 function TextButton({
   onClick,
   children,
@@ -311,7 +342,7 @@ function TextButton({
       onClick={onClick}
       className={cn(
         'inline-flex items-center gap-1 rounded font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-brand-200 focus-visible:outline-none',
-        tone === 'brand' ? 'text-brand-600 hover:text-brand-700' : 'text-slate-500 hover:text-slate-700',
+        tone === 'brand' ? 'text-brand-600 hover:text-brand-700' : 'text-slate-600 hover:text-ink',
       )}
     >
       {children}
