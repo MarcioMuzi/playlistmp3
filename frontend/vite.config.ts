@@ -7,6 +7,8 @@ const apiTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:8000'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Identifica o build: versiona o cache do service worker (public/sw.js).
+  define: { __BUILD_ID__: JSON.stringify(Date.now().toString(36)) },
   server: {
     host: '0.0.0.0',
     port: 5173,

@@ -36,16 +36,26 @@ export class ApiError extends Error {
   }
 }
 
+const SERVER_DOWN =
+  'O PlaylistMP3 não está respondendo. Verifique se o Docker Desktop está aberto e rode "docker compose up -d" na pasta do projeto.'
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let res: Response
   try {
     res = await fetch(path, { ...init, headers: { 'Content-Type': 'application/json', ...init.headers } })
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err
-    throw new ApiError('NETWORK', 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.')
+    throw new ApiError('NETWORK', SERVER_DOWN)
   }
 
   if (!res.ok) {
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      // O nginx responde, mas o backend está fora (iniciando ou parado).
+      const text = await res.text().catch(() => '')
+      if (!text.trim().startsWith('{')) throw new ApiError('NETWORK', SERVER_DOWN)
+      const body = JSON.parse(text) as Partial<ErrorBody>
+      throw new ApiError(body.code ?? 'UNKNOWN', body.message ?? `Erro inesperado no servidor (HTTP ${res.status}).`)
+    }
     let body: Partial<ErrorBody> = {}
     try {
       body = await res.json()

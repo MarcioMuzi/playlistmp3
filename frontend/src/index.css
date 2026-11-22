@@ -4,7 +4,7 @@
 @custom-variant short (@media (min-width: 40rem) and (max-height: 720px));
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --color-brand-50: #eef2ff;
   --color-brand-100: #e0e7ff;

@@ -5,12 +5,13 @@ Aplicação web minimalista: cole o link de um vídeo do YouTube e baixe o áudi
 - Aceita somente vídeos do YouTube: `youtube.com/watch?v=…`, `youtu.be/…` e `youtube.com/shorts/…`
 - Sem cadastro, sem histórico e sem banco de dados
 - Roda no seu computador, e os arquivos são apagados do servidor logo após o download
+- Pode ser **instalado como aplicativo** (PWA) no Windows, Linux e Mac, com ícone e janela próprios
 
 ![Tela do PlaylistMP3 com um MP3 pronto para download](docs/screenshot-pronto.png)
 
 > Projeto educacional, para uso pessoal. Leia o [aviso legal](#aviso-legal) antes de usar.
 
-**Sumário:** [Instalação passo a passo](#instalação-passo-a-passo) · [Uso no dia a dia](#uso-no-dia-a-dia) · [Problemas comuns](#problemas-comuns) · [Para desenvolvedores](#para-desenvolvedores) · [Aviso legal](#aviso-legal) · [Licença](#licença)
+**Sumário:** [Instalação passo a passo](#instalação-passo-a-passo) · [Instalar como aplicativo](#6-opcional-instale-como-aplicativo) · [Uso no dia a dia](#uso-no-dia-a-dia) · [Problemas comuns](#problemas-comuns) · [Para desenvolvedores](#para-desenvolvedores) · [Aviso legal](#aviso-legal) · [Licença](#licença)
 
 ---
 
@@ -70,6 +71,17 @@ Acesse **[http://localhost:8080](http://localhost:8080)**, cole o link de um ví
 
 Pronto! 🎉
 
+### 6. (Opcional) Instale como aplicativo
+
+O PlaylistMP3 é um **PWA**: no **Chrome** ou no **Edge**, ele pode ser instalado como um aplicativo, com ícone no menu Iniciar ou no Dock e janela própria, sem barra de endereço.
+
+- Clique no botão **Instalar app** no topo da página, **ou**
+- no ícone de instalação que aparece no fim da barra de endereço (Chrome) ou em **⋯ → Aplicativos → Instalar PlaylistMP3** (Edge).
+
+O app instalado ainda depende do Docker: se o PlaylistMP3 estiver desligado, a janela abre normalmente e mostra como ligá-lo. Para desinstalar, abra o app e use **⋯ → Desinstalar PlaylistMP3**.
+
+> **E no celular?** Não é possível. Navegadores só instalam PWAs servidos por HTTPS ou pelo próprio computador (`localhost`). O celular acessaria pelo IP da rede (`http://192.168…`), que não atende a essa exigência.
+
 ---
 
 ## Uso no dia a dia
@@ -80,6 +92,7 @@ Rode os comandos abaixo num terminal aberto **na pasta do projeto** (veja o [pas
 |---|---|
 | **Desligar** o PlaylistMP3 | `docker compose down` |
 | **Ligar** de novo | `docker compose up -d` |
+| **Abrir** o app instalado | Menu Iniciar (Windows), Launchpad/Dock (Mac) ou menu de aplicativos (Linux): **PlaylistMP3** |
 | **Atualizar** para a versão mais nova do projeto | Baixe o ZIP de novo (ou rode `git pull`) e depois `docker compose up -d --build` |
 | **Atualizar só o yt-dlp**, quando as conversões começarem a falhar | Veja [Quando o YouTube bloquear](#quando-o-youtube-bloquear) |
 
@@ -95,6 +108,8 @@ Rode os comandos abaixo num terminal aberto **na pasta do projeto** (veja o [pas
 | `Cannot connect to the Docker daemon` ou `error during connect` | O Docker Desktop está fechado. Abra o Docker Desktop, espere ficar pronto e rode o comando de novo. |
 | `no configuration file provided: not found` | O terminal não está na pasta do projeto. Refaça o [passo 3](#3-abra-um-terminal-dentro-da-pasta-do-projeto). |
 | `port is already allocated` ou `ports are not available` | Outro programa está usando a porta 8080. Na pasta do projeto, crie um arquivo chamado `.env`, com ponto no início, contendo a linha `APP_PORT=8081`. No Bloco de Notas, escolha "Todos os arquivos" ao salvar. Rode `docker compose up -d` e acesse `http://localhost:8081`. |
+| O app mostra **"O PlaylistMP3 não está respondendo"** | O servidor está desligado. Abra o Docker Desktop e rode `docker compose up -d` na pasta do projeto. |
+| O botão **Instalar app** não aparece | Ele só existe no Chrome e no Edge, e some quando o app já está instalado. Se mesmo assim não aparecer, use o ícone de instalação da barra de endereço. |
 | O navegador diz que **não consegue acessar** `localhost:8080` | Espere alguns segundos e recarregue a página. Confira com `docker compose ps`: os dois serviços devem aparecer como `Up`. |
 | **WSL 2 installation is incomplete** (Windows) | Abra o PowerShell como administrador, rode `wsl --update` e reinicie o computador. |
 | O app mostra **"O YouTube recusou a requisição"** | O YouTube bloqueou temporariamente. Tente de novo em alguns minutos. Se continuar, atualize o yt-dlp (veja [Quando o YouTube bloquear](#quando-o-youtube-bloquear)). |
@@ -107,7 +122,8 @@ Rode os comandos abaixo num terminal aberto **na pasta do projeto** (veja o [pas
 
 | Camada | Tecnologia |
 |---|---|
-| Frontend | React 19, Vite 7, TypeScript, Tailwind CSS 4, Lucide |
+| Frontend | React 19, Vite 7, TypeScript, Tailwind CSS 4, Lucide, fonte Inter servida localmente |
+| PWA | Web App Manifest, service worker próprio (`public/sw.js`), prompt de instalação |
 | Backend | Python 3.12, FastAPI, yt-dlp, ffmpeg, Deno (resolve os desafios JS do YouTube) |
 | Infra | Docker Compose (nginx serve o SPA e faz proxy de `/api`) |
 
@@ -146,11 +162,21 @@ Os erros vêm como `{code, message}`, com estes códigos: `INVALID_URL`, `PRIVAT
 4. **Startup e shutdown:** o diretório temporário é esvaziado por completo.
 5. **tmpfs:** os arquivos vivem em RAM, com limite definido por `TMPFS_SIZE`, e nunca tocam o disco.
 
+### PWA
+
+- **Manifest** (`public/manifest.webmanifest`) com ícones `any` e `maskable` e uma screenshot para a tela de instalação.
+- **Service worker** (`public/sw.js`), registrado só no build de produção:
+  - páginas usam rede primeiro e caem no cache quando não há rede;
+  - os arquivos de `/assets/` (com hash no nome) usam cache primeiro;
+  - **`/api/*` nunca passa pelo cache**.
+- **Versionamento:** cada build gera um ID (`__BUILD_ID__`) que entra no nome do cache, e o service worker novo apaga os caches antigos ao ativar.
+
 ### Segurança
 
 - **Acesso só local por padrão:** a porta escuta em `127.0.0.1`. Para usar de outro aparelho na mesma rede, defina `APP_BIND=0.0.0.0` no `.env`. Não há login nem limite de uso, então só faça isso em redes de confiança.
 - **Links:** o link informado nunca é repassado ao yt-dlp. O backend extrai só o ID de 11 caracteres e monta ele mesmo a URL `youtube.com/watch?v=ID`. Isso bloqueia outras plataformas, playlists, endereços internos e tentativas de injeção.
 - **Sem shell:** o yt-dlp é chamado pela API Python, e os argumentos do ffmpeg são fixos. Os nomes de arquivo são sanitizados e os IDs de download são aleatórios (128 bits).
+- **Sem dependências externas na página:** a fonte é servida pelo próprio app. As únicas requisições externas são as thumbnails do YouTube (`i.ytimg.com`).
 - **Navegador:** o nginx envia `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` e `Permissions-Policy`. A API só aceita JSON, o que impede outros sites de dispararem conversões na sua máquina (CSRF).
 - **Containers:** o backend roda sem root, os segredos são montados somente leitura e os arquivos temporários ficam em RAM.
 
