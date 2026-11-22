@@ -1,4 +1,12 @@
-"""Integração com o yt-dlp: metadados (com cache curto) e conversão para MP3."""
+"""Integração com o yt-dlp: metadados (com cache curto) e conversão para MP3.
+
+Fluxo de autenticação (ver auth.py):
+  - off:      sempre anônimo.
+  - fallback: anônimo primeiro; se o YouTube bloquear (BLOCKED) ou exigir idade
+              (AGE_RESTRICTED), repete com os cookies da conta configurada.
+  - always:   sempre com a conta (quando os cookies são válidos).
+Os detalhes de autenticação ficam apenas nos logs; a interface só vê "retrying".
+"""
 
 from __future__ import annotations
 
@@ -7,14 +15,17 @@ import logging
 import shutil
 import threading
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 import yt_dlp
 from yt_dlp.utils import DownloadCancelled, DownloadError
 
+from . import auth
 from .config import settings
-from .errors import AppError, app_error, from_ytdlp_exception
+from .errors import AppError, app_error, classify_ytdlp_error, from_ytdlp_exception
 from .jobs import registry
 from .validators import canonical_url
 
@@ -25,6 +36,9 @@ _SQUARE_COVER = (
     "ThumbnailsConvertor+FFmpeg_o:-c:v mjpeg -qmin 1 -qscale:v 1 "
     "-vf crop=\"'if(gt(ih,iw),iw,ih)':'if(gt(iw,ih),ih,iw)'\""
 )
+
+# Erros que uma sessão logada pode resolver.
+AUTH_FALLBACK_CODES = {"BLOCKED", "AGE_RESTRICTED"}
 
 
 class _YtdlpLogger:
@@ -37,13 +51,19 @@ class _YtdlpLogger:
         log.debug(msg)
 
     def warning(self, msg: str) -> None:
+        if "cookies are no longer valid" in msg.lower():
+            log.error(
+                "os cookies da conta do YouTube expiraram ou foram rotacionados; "
+                "exporte um novo cookies.txt (ver README, seção 'Conta do YouTube')"
+            )
+            return
         log.warning(msg)
 
     def error(self, msg: str) -> None:
         log.error(msg)
 
 
-def _base_args() -> list[str]:
+def _base_args(cookie_file: Path | None = None) -> list[str]:
     args = [
         "--format", "bestaudio/best",
         "--no-playlist",
@@ -54,6 +74,8 @@ def _base_args() -> list[str]:
     ]
     if settings.pot_provider_url:
         args += ["--extractor-args", f"youtubepot-bgutilhttp:base_url={settings.pot_provider_url}"]
+    if cookie_file is not None:
+        args += ["--cookies", str(cookie_file)]
     return args
 
 
@@ -63,34 +85,73 @@ def _build_opts(args: list[str]) -> dict[str, Any]:
     return opts
 
 
+@contextmanager
+def _cookies(use_auth: bool, directory: Path) -> Iterator[Path | None]:
+    if not use_auth:
+        yield None
+        return
+    with auth.cookie_copy(directory) as path:
+        yield path
+
+
 # ---------------------------------------------------------------------------
 # Metadados
 # ---------------------------------------------------------------------------
 
-_info_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+# video_id -> (timestamp, info, extraído com a conta?)
+_info_cache: dict[str, tuple[float, dict[str, Any], bool]] = {}
 _info_lock = threading.Lock()
 
 
-def fetch_info(video_id: str) -> dict[str, Any]:
-    """Extrai (ou reaproveita do cache) o info dict do yt-dlp e valida as restrições."""
-    now = time.monotonic()
-    with _info_lock:
-        cached = _info_cache.get(video_id)
-    if cached and now - cached[0] < settings.info_cache_ttl:
-        info = cached[1]
-    else:
-        try:
-            with yt_dlp.YoutubeDL(_build_opts(_base_args())) as ydl:
+def _extract(video_id: str, use_auth: bool) -> dict[str, Any]:
+    try:
+        with _cookies(use_auth, settings.temp_dir) as cookie_file:
+            with yt_dlp.YoutubeDL(_build_opts(_base_args(cookie_file))) as ydl:
                 info = ydl.extract_info(canonical_url(video_id), download=False)
-        except DownloadError as exc:
-            raise from_ytdlp_exception(exc) from exc
-        if not info:
-            raise app_error("UNAVAILABLE")
-        with _info_lock:
-            _info_cache[video_id] = (now, info)
-
-    _validate(info)
+    except DownloadError as exc:
+        raise from_ytdlp_exception(exc) from exc
+    if not info:
+        raise app_error("UNAVAILABLE")
     return info
+
+
+def resolve_info(video_id: str, use_auth: bool | None = None) -> tuple[dict[str, Any], bool]:
+    """Devolve (info, usou_conta), validando as restrições.
+
+    use_auth=None decide sozinho (cache + modo de autenticação); True/False força a
+    extração nova naquele modo (usado nas novas tentativas do download).
+    """
+    now = time.monotonic()
+    if use_auth is None:
+        with _info_lock:
+            cached = _info_cache.get(video_id)
+        if cached and now - cached[0] < settings.info_cache_ttl:
+            _validate(cached[1])
+            return cached[1], cached[2]
+
+    if use_auth is None:
+        can_auth = auth.available()
+        if can_auth and auth.mode() == "always":
+            info, used_auth = _extract(video_id, True), True
+        else:
+            try:
+                info, used_auth = _extract(video_id, False), False
+            except AppError as exc:
+                if not (exc.code in AUTH_FALLBACK_CODES and can_auth and auth.mode() == "fallback"):
+                    raise
+                log.info("vídeo %s: %s na tentativa anônima; repetindo com a conta configurada", video_id, exc.code)
+                info, used_auth = _extract(video_id, True), True
+    else:
+        info, used_auth = _extract(video_id, use_auth), use_auth
+
+    with _info_lock:
+        _info_cache[video_id] = (now, info, used_auth)
+    _validate(info)
+    return info, used_auth
+
+
+def fetch_info(video_id: str) -> dict[str, Any]:
+    return resolve_info(video_id)[0]
 
 
 def _validate(info: dict[str, Any]) -> None:
@@ -114,7 +175,7 @@ def invalidate_info(video_id: str) -> None:
 def purge_info_cache() -> None:
     now = time.monotonic()
     with _info_lock:
-        for key in [k for k, (ts, _) in _info_cache.items() if now - ts >= settings.info_cache_ttl]:
+        for key in [k for k, (ts, _, _) in _info_cache.items() if now - ts >= settings.info_cache_ttl]:
             del _info_cache[key]
 
 
@@ -152,8 +213,8 @@ def _format_duration(seconds: int) -> str:
 # Conversão (executada em thread do pool)
 # ---------------------------------------------------------------------------
 
-def _download_args(job_dir: str) -> list[str]:
-    return _base_args() + [
+def _download_args(job_dir: Path, cookie_file: Path | None) -> list[str]:
+    return _base_args(cookie_file) + [
         "--extract-audio",
         "--audio-format", "mp3",
         "--audio-quality", f"{settings.audio_bitrate}K",
@@ -165,11 +226,30 @@ def _download_args(job_dir: str) -> list[str]:
     ]
 
 
-_DOWNLOAD_ATTEMPTS = 3
+def attempt_plan(started_with_auth: bool, mode: str, can_auth: bool) -> list[bool]:
+    """Sequência de tentativas de download: True = com a conta, False = anônima.
+
+    O HTTP 403 costuma ser intermitente, então cada modo ganha duas tentativas
+    (cada uma com extração nova dos metadados).
+    """
+    if not can_auth or mode == "off":
+        return [False, False, False]
+    if started_with_auth or mode == "always":
+        return [True, True]
+    return [False, False, True, True]
 
 
-def _is_forbidden(exc: BaseException) -> bool:
-    return "http error 403" in str(exc).lower()
+def _error_code(exc: BaseException) -> str:
+    return exc.code if isinstance(exc, AppError) else classify_ytdlp_error(str(exc))
+
+
+def _next_attempt(plan: list[bool], index: int, code: str) -> int | None:
+    """Índice da próxima tentativa útil para o erro, ou None para desistir."""
+    if code == "BLOCKED":
+        return index + 1 if index + 1 < len(plan) else None
+    if code in AUTH_FALLBACK_CODES:  # só uma sessão logada resolve
+        return next((i for i in range(index + 1, len(plan)) if plan[i]), None)
+    return None
 
 
 def _clear_dir(path: Path) -> None:
@@ -209,34 +289,46 @@ def run_job(job_id: str) -> None:
             registry.update(job_id, status="converting", progress=1.0)
 
     try:
-        opts = _build_opts(_download_args(str(job_dir)))
-        opts["progress_hooks"] = [progress_hook]
-        opts["postprocessor_hooks"] = [postprocessor_hook]
+        _, started_with_auth = resolve_info(job.video_id)
+        plan = attempt_plan(started_with_auth, auth.mode(), auth.available())
 
-        for attempt in range(1, _DOWNLOAD_ATTEMPTS + 1):
-            info = fetch_info(job.video_id)
-            registry.update(job_id, status="extracting", progress=0.0)
+        index = 0
+        while True:
+            use_auth = plan[index]
             try:
-                with yt_dlp.YoutubeDL(opts) as ydl:
-                    ydl.process_ie_result(copy.deepcopy(info), download=True)
+                info, _ = resolve_info(job.video_id) if index == 0 else resolve_info(job.video_id, use_auth)
+                registry.update(job_id, status="extracting", progress=0.0)
+                with _cookies(use_auth, job_dir) as cookie_file:
+                    opts = _build_opts(_download_args(job_dir, cookie_file))
+                    opts["progress_hooks"] = [progress_hook]
+                    opts["postprocessor_hooks"] = [postprocessor_hook]
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        ydl.process_ie_result(copy.deepcopy(info), download=True)
+                if use_auth:
+                    log.info("job %s: download concluído com a conta configurada", job_id)
                 break
-            except DownloadError as exc:
-                # O YouTube às vezes invalida a URL de mídia (HTTP 403). Uma nova
-                # extração costuma trazer URLs válidas, então tentamos de novo.
-                if attempt < _DOWNLOAD_ATTEMPTS and _is_forbidden(exc):
-                    check_cancelled()
-                    log.warning("job %s: HTTP 403 no download (tentativa %d), reextraindo", job_id, attempt)
-                    invalidate_info(job.video_id)
-                    _clear_dir(job_dir)
-                    continue
-                raise
+            except (DownloadError, AppError) as exc:
+                code = _error_code(exc)
+                nxt = _next_attempt(plan, index, code)
+                if nxt is None:
+                    raise
+                check_cancelled()
+                log.warning(
+                    "job %s: %s na tentativa %d (%s); nova tentativa %s",
+                    job_id, code, index + 1, "com conta" if use_auth else "anônima",
+                    "com conta" if plan[nxt] else "anônima",
+                )
+                invalidate_info(job.video_id)
+                _clear_dir(job_dir)
+                registry.update(job_id, retrying=True, status="extracting", progress=0.0)
+                index = nxt
 
         check_cancelled()
         mp3 = next(job_dir.glob("*.mp3"), None)
         if mp3 is None:
             raise app_error("UNKNOWN", "A conversão terminou, mas o arquivo MP3 não foi gerado.")
 
-        registry.update(job_id, status="ready", file_path=mp3, size=mp3.stat().st_size)
+        registry.update(job_id, status="ready", retrying=False, file_path=mp3, size=mp3.stat().st_size)
         succeeded = True
         log.info("job %s pronto: %s (%d bytes)", job_id, job.video_id, mp3.stat().st_size)
     except DownloadCancelled:

@@ -6,7 +6,7 @@ export type ProcessingStage = 'extracting' | 'converting'
 export type ConversionState =
   | { phase: 'idle' }
   | { phase: 'validating' }
-  | { phase: 'processing'; video: VideoInfo; stage: ProcessingStage; progress: number }
+  | { phase: 'processing'; video: VideoInfo; stage: ProcessingStage; progress: number; retrying: boolean }
   | { phase: 'ready'; video: VideoInfo; job: Job }
   | { phase: 'downloaded'; video: VideoInfo; job: Job }
   | { phase: 'error'; video?: VideoInfo; error: ErrorBody }
@@ -64,7 +64,7 @@ export function useConversion() {
       try {
         video = await api.info(url, controller.signal)
         if (!alive()) return
-        setState({ phase: 'processing', video, stage: 'extracting', progress: 0 })
+        setState({ phase: 'processing', video, stage: 'extracting', progress: 0, retrying: false })
 
         const created = await api.convert(url, controller.signal)
         if (!alive()) return
@@ -98,6 +98,7 @@ export function useConversion() {
             video,
             stage: job.status === 'converting' ? 'converting' : 'extracting',
             progress: job.progress,
+            retrying: job.retrying,
           })
         }
       } catch (err) {

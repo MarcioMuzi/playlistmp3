@@ -22,6 +22,10 @@ class Settings:
     max_concurrent_jobs: int = _int("MAX_CONCURRENT_JOBS", 2)
     info_cache_ttl: int = _int("INFO_CACHE_TTL", 600)  # segundos
     pot_provider_url: str = os.getenv("POT_PROVIDER_URL", "").strip()
+    # Conta do YouTube (opcional), via cookies: off | fallback | always
+    youtube_auth_mode: str = os.getenv("YOUTUBE_AUTH_MODE", "fallback").strip().lower() or "fallback"
+    youtube_cookies_file: str = os.getenv("YOUTUBE_COOKIES_FILE", "").strip() or "youtube-cookies.txt"
+    secrets_dir: Path = Path(os.getenv("SECRETS_DIR", "/secrets"))
     log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()
 
 

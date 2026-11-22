@@ -6,3 +6,9 @@ __pycache__/
 .pytest_cache/
 .venv/
 .DS_Store
+
+# Segredos: nunca versionar cookies da conta do YouTube
+secrets/*
+!secrets/.gitkeep
+!secrets/README.md
+*cookies*.txt

@@ -71,8 +71,88 @@ Os sintomas são HTTP 403 ou a mensagem "Sign in to confirm you're not a bot".
    POT_PROVIDER_URL=http://pot-provider:4416
    ```
    e rode `docker compose up -d`.
+3. **Configure uma conta do YouTube** (veja a próxima seção). O backend passa a usá-la automaticamente quando a tentativa anônima é bloqueada.
 
-O backend já tenta novamente, até 3 vezes, quando o download recebe HTTP 403, e a cada tentativa refaz a extração dos metadados.
+O backend já tenta novamente quando o download recebe HTTP 403, e a cada tentativa refaz a extração dos metadados. Sem conta configurada são até 3 tentativas anônimas. Com conta, no modo `fallback`, são 2 anônimas seguidas de 2 com a conta.
+
+## Conta do YouTube (opcional)
+
+O backend pode usar uma conta do YouTube como **plano B** quando o YouTube bloqueia a tentativa anônima (HTTP 403 ou "not a bot") ou quando o vídeo tem restrição de idade.
+
+> **Não existe login com usuário e senha.** O yt-dlp não aceita mais esse tipo de login no YouTube, e o OAuth também foi removido. A única forma suportada é um arquivo `cookies.txt` com a sessão logada, exportado do navegador. Por isso nenhuma senha vai para o `.env`.
+
+**Qual conta usar.** O código não depende da conta: ele só lê o `cookies.txt` configurado.
+
+| Conta | Vantagens | Riscos |
+|---|---|---|
+| **YouTube Premium** | Dispensa PO token e dá acesso a áudio de maior bitrate (~256 kbps) | Baixar fora do app viola os termos do YouTube, e a conta que você paga pode ser sinalizada ou suspensa |
+| **Secundária gratuita** | Protege a conta principal | Não tem os benefícios do Premium |
+
+**Modos** (`YOUTUBE_AUTH_MODE` no `.env`):
+
+| Modo | Comportamento |
+|---|---|
+| `fallback` (padrão) | Tenta anônimo primeiro e usa a conta só quando o YouTube bloqueia ou exige idade |
+| `always` | Usa a conta em todas as conversões, com mais qualidade e mais exposição da conta |
+| `off` | Nunca usa a conta |
+
+Sem o arquivo de cookies, o app funciona normalmente no modo anônimo. Os detalhes de autenticação aparecem **só nos logs do backend**: a interface e a API não revelam que existe uma conta configurada. Durante uma nova tentativa, a interface mostra apenas "Tentando rota alternativa…".
+
+### 1. Exportar os cookies (janela anônima)
+
+Siga este procedimento para os cookies não serem invalidados ("rotacionados") pelo próprio navegador logo depois:
+
+1. Abra uma **janela anônima** e faça login no YouTube com a conta escolhida.
+2. Nessa mesma aba, acesse `https://www.youtube.com/robots.txt`.
+3. Exporte os cookies de `youtube.com` no formato **Netscape**. Uma opção é a extensão [Get cookies.txt LOCALLY](https://github.com/kairi003/Get-cookies.txt-LOCALLY), que precisa estar liberada para a janela anônima. Evite extensões de origem duvidosa, porque esse arquivo dá acesso à sua conta.
+4. **Feche a janela anônima** sem sair da conta. Se você clicar em "Sair", a sessão é invalidada.
+
+Detalhes no wiki do yt-dlp: [Exporting YouTube cookies](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies).
+
+### 2. Instalar o arquivo
+
+O backend lê o arquivo em `./secrets/` (pasta fora do Git, montada **somente leitura** no container) com o nome definido em `YOUTUBE_COOKIES_FILE` (padrão: `youtube-cookies.txt`). O container roda com **UID 1000**, por isso o arquivo precisa ser legível por esse usuário.
+
+**Local (WSL2):**
+
+```bash
+# o navegador salvou em Downloads do Windows; ajuste o caminho
+cp /mnt/c/Users/<seu-usuario>/Downloads/youtube-cookies.txt ./secrets/youtube-cookies.txt
+chmod 600 ./secrets/youtube-cookies.txt
+rm /mnt/c/Users/<seu-usuario>/Downloads/youtube-cookies.txt   # não deixe cópias soltas
+```
+
+No WSL o seu usuário costuma ter UID 1000. Confira com `id -u`.
+
+**VPS:**
+
+```bash
+# na sua máquina
+scp youtube-cookies.txt usuario@sua-vps:/caminho/do/playlistmp3/secrets/youtube-cookies.txt
+
+# na VPS
+cd /caminho/do/playlistmp3
+sudo chown 1000:1000 secrets secrets/youtube-cookies.txt
+chmod 700 secrets
+chmod 600 secrets/youtube-cookies.txt
+```
+
+### 3. Atualizar quando expirar
+
+Os cookies duram de semanas a meses. Quando expiram, o log do backend mostra uma mensagem como `os cookies da conta do YouTube expiraram ou foram rotacionados`. Para renovar, basta **repetir os passos 1 e 2 sobrescrevendo o arquivo**. Não é preciso rebuild nem restart, porque o arquivo é lido a cada conversão.
+
+Para conferir o status:
+
+```bash
+docker compose logs backend | grep -iE "conta do youtube|autentica|cookies"
+```
+
+Na inicialização aparece, por exemplo, `conta do YouTube: modo fallback, cookies de sessão encontrados (youtube-cookies.txt)`. O conteúdo dos cookies nunca é registrado.
+
+**Segurança:**
+- O `.env`, a pasta `secrets/` e qualquer arquivo `*cookies*.txt` estão no `.gitignore`.
+- A cada uso, o backend trabalha numa cópia temporária em RAM (`chmod 600`), apagada logo em seguida. O arquivo original nunca é alterado.
+- Se o arquivo vazar, saia da conta em todos os dispositivos (Conta do Google → Segurança). Isso invalida os cookies.
 
 ## Configuração (`.env`)
 
@@ -87,6 +167,8 @@ O backend já tenta novamente, até 3 vezes, quando o download recebe HTTP 403, 
 | `CLEANUP_INTERVAL` | `300` | Intervalo da rotina de limpeza, em segundos |
 | `TMPFS_SIZE` | `1g` | Tamanho máximo do diretório temporário em RAM |
 | `LOG_LEVEL` | `INFO` | Nível de log do backend |
+| `YOUTUBE_AUTH_MODE` | `fallback` | Uso da conta do YouTube: `fallback`, `always` ou `off` |
+| `YOUTUBE_COOKIES_FILE` | `youtube-cookies.txt` | Nome do arquivo de cookies dentro de `./secrets/` |
 
 > O estado dos jobs vive em memória, por isso o backend roda com **1 worker** do uvicorn.
 

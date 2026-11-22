@@ -29,6 +29,7 @@ class Job:
     file_path: Path | None = None
     size: int | None = None
     cancelled: bool = False
+    retrying: bool = False  # nova tentativa em andamento (sem revelar o motivo à interface)
     created_at: float = field(default_factory=time.monotonic)
     updated_at: float = field(default_factory=time.monotonic)
 
@@ -39,6 +40,7 @@ class Job:
             "progress": round(self.progress * 100, 1),
             "video": self.video,
             "size": self.size,
+            "retrying": self.retrying,
             "download_url": f"/api/download/{self.id}" if self.status == "ready" else None,
             "error": self.error.to_dict() if self.error else None,
         }

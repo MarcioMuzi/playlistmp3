@@ -133,11 +133,14 @@ function ProgressPanel({
   const current = state.phase === 'validating' ? 0 : state.stage === 'extracting' ? 1 : 2
   const percent = state.phase === 'processing' && state.stage === 'extracting' ? state.progress : 0
   const determinate = current === 1 && percent > 0
+  const retrying = state.phase === 'processing' && state.retrying
   const caption =
     current === 0
       ? 'Buscando informações do vídeo…'
       : current === 1
-        ? determinate
+        ? retrying && !determinate
+          ? 'Tentando rota alternativa…'
+          : determinate
           ? `Extraindo o áudio… ${Math.round(percent)}%`
           : 'Extraindo o áudio…'
         : 'Convertendo e adicionando a capa…'

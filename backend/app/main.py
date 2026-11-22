@@ -15,6 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
+from . import auth
 from .cleanup import cleanup_loop, purge_temp_dir, remove_job_files
 from .config import settings
 from .converter import fetch_info, run_job, summarize
@@ -37,6 +38,8 @@ async def lifespan(_: FastAPI):
         yt_dlp.version.__version__, settings.audio_bitrate, settings.max_duration,
         settings.pot_provider_url or "desativado",
     )
+    # Só no log: a API pública não revela se há conta configurada.
+    log.info("conta do YouTube: %s", auth.describe())
     try:
         yield
     finally:

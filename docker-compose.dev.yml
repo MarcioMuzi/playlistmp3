@@ -11,6 +11,8 @@ x-backend-env: &backend-env
   AUDIO_BITRATE: ${AUDIO_BITRATE:-320}
   MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-2}
   POT_PROVIDER_URL: ${POT_PROVIDER_URL:-}
+  YOUTUBE_AUTH_MODE: ${YOUTUBE_AUTH_MODE:-fallback}
+  YOUTUBE_COOKIES_FILE: ${YOUTUBE_COOKIES_FILE:-youtube-cookies.txt}
   LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
 
 services:
@@ -25,6 +27,7 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/tests:/app/tests
+      - ./secrets:/secrets:ro # cookies da conta do YouTube (opcional)
     tmpfs:
       - /tmp/playlistmp3:size=${TMPFS_SIZE:-1g},mode=1777
     ports:

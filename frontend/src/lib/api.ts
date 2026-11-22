@@ -21,6 +21,8 @@ export interface Job {
   progress: number
   video: VideoInfo
   size: number | null
+  /** Nova tentativa em andamento (motivo não exposto). */
+  retrying: boolean
   download_url: string | null
   error: ErrorBody | null
 }
